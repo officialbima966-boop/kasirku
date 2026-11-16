@@ -1,0 +1,16 @@
+# Checklist Pengujian
+- [ ] Login berhasil dan gagal.
+- [ ] Tambah, tampil, hapus pelanggan.
+- [ ] Tambah, tampil, hapus kategori.
+- [ ] Tambah, tampil, hapus produk.
+- [ ] Simpan transaksi dengan stok mencukupi dan pastikan stok berkurang tepat sesuai jumlah yang dibeli.
+- [ ] Transaksi ditolak jika jumlah melebihi stok.
+- [ ] Transaksi gagal tidak menyimpan detail atau mengubah stok.
+- [ ] Detail dan struk menampilkan subtotal, diskon, pajak, total, serta informasi pelanggan dengan benar.
+- [ ] Cetak struk hanya menampilkan struk transaksi.
+- [ ] View laporan transaksi dapat di-SELECT.
+- [ ] Stored Procedure dapat dipanggil dengan CALL.
+- [ ] Stored Function dapat dipanggil dengan SELECT.
+- [ ] Trigger mencatat pelanggan baru dan perubahan.
+- [ ] TCL COMMIT dan ROLLBACK diuji.
+- [ ] EXPLAIN menampilkan rencana eksekusi query.

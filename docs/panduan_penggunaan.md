@@ -1,0 +1,13 @@
+# Panduan Penggunaan
+- Login dengan akun administrator.
+- Tambahkan kategori terlebih dahulu.
+- Tambahkan produk dan stok awal.
+- Barcode produk ditampilkan sebagai gambar Code 39 di tampilan Tabel. Isi kodenya dengan barcode pada kemasan; jika dikosongkan, sistem membuat kode internal. Ubah melalui kolom Barcode di tabel produk jika memakai barcode fisik.
+- Tambahkan pelanggan.
+- Buat transaksi dengan memilih pelanggan, produk, dan jumlah.
+- Di halaman kasir, fokuskan kolom Scan Barcode lalu gunakan scanner USB/Bluetooth seperti keyboard. Produk yang cocok otomatis masuk ke keranjang; stok berkurang setelah transaksi berhasil.
+- Stok produk berkurang otomatis setelah transaksi berhasil; transaksi yang melebihi stok akan ditolak.
+- Periksa atau cetak struk pembayaran dan laporan penjualan.
+- Struk menggunakan nama toko Bima Surya, menampilkan rincian barang, total, uang dibayar, dan kembalian. Lebarnya mengikuti ukuran kertas yang dipilih di driver printer, sedangkan isinya mengalir mengikuti jumlah barang. Pilih media roll/continuous dengan lebar yang sesuai, skala 100%, margin default (area aman cetak 2 mm), dan nonaktifkan header/footer browser.
+- Buka menu Advanced SQL untuk memeriksa hasil View dan Subquery.
+- Buka Log Aktivitas untuk memeriksa catatan yang dibuat Trigger.
