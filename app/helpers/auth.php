@@ -2,6 +2,12 @@
 function is_logged_in(): bool { return isset($_SESSION['user']); }
 function require_login(): void { if (!is_logged_in()) redirect(url('login')); }
 function current_user(): array { return $_SESSION['user'] ?? []; }
+function home_page_for_role(?string $role=null): string {
+    $role=$role ?? (current_user()['role'] ?? '');
+    if($role==='pelanggan') return 'member';
+    if($role==='kasir') return 'kasir_pesanan';
+    return 'dashboard';
+}
 function csrf_token(): string {
     if (empty($_SESSION['_csrf'])) $_SESSION['_csrf']=bin2hex(random_bytes(32));
     return $_SESSION['_csrf'];

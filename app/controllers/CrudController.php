@@ -1,14 +1,14 @@
 <?php
 class CrudController {
-    private function storeProductPhoto(?array $file): string {
-        if (!$file || !isset($file['error']) || is_array($file['error'])) {
-            throw new RuntimeException('Silakan pilih foto produk.');
+    private function storeProductPhoto(?array $file, bool $isRequired = true): ?string {
+        if (!$file || !isset($file['error']) || is_array($file['error']) || $file['error'] === UPLOAD_ERR_NO_FILE) {
+            if ($isRequired) {
+                throw new RuntimeException('Silakan pilih foto produk.');
+            }
+            return null;
         }
         if ($file['error'] !== UPLOAD_ERR_OK) {
-            $message = $file['error'] === UPLOAD_ERR_NO_FILE
-                ? 'Silakan pilih foto produk.'
-                : 'Foto gagal diunggah. Pastikan ukuran file tidak melebihi 5 MB.';
-            throw new RuntimeException($message);
+            throw new RuntimeException('Foto gagal diunggah. Pastikan ukuran file tidak melebihi 5 MB.');
         }
         if (($file['size'] ?? 0) > 5 * 1024 * 1024 || !is_uploaded_file($file['tmp_name'] ?? '')) {
             throw new RuntimeException('Foto tidak valid atau ukurannya melebihi 5 MB.');
@@ -37,6 +37,7 @@ class CrudController {
         $models=['pelanggan'=>Pelanggan::class,'produk'=>Produk::class,'kategori'=>Kategori::class];
         $model=new $models[$type](); $title=ucfirst($type); $items=$model->all();
         $db=Database::connect(); $categories=$type==='produk'?$db->query("SELECT * FROM tbl_kategori ORDER BY nama_kategori")->fetchAll():[];
+        $editItem = ($type==='produk' && isset($_GET['edit'])) ? $model->find((int)$_GET['edit']) : null;
         if($_SERVER['REQUEST_METHOD']==='POST'){
             if($type==='produk' && ($_POST['aksi']??'')==='update_barcode') {
                 $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);
@@ -57,17 +58,17 @@ class CrudController {
             $id=(int)($_POST['id']??0);
             $uploadedPhoto = null;
             try {
-                if($type==='pelanggan') $model->save(['nama_pelanggan'=>post('nama_pelanggan'),'kota'=>post('kota'),'no_hp'=>post('no_hp'),'alamat'=>post('alamat')],$id?:null);
+                if($type==='pelanggan') $model->save(['nama_pelanggan'=>post('nama_pelanggan'),'kota'=>post('kota'),'no_hp'=>post('no_hp'),'alamat'=>post('alamat'),'username'=>post('username'),'rfid_uid'=>post('rfid_uid')],$id?:null);
                 elseif($type==='produk') {
                     $barcodeValue=$_POST['barcode']??'';
                     if(!is_string($barcodeValue)) throw new RuntimeException('Barcode tidak valid.');
                     $barcode=strtoupper(trim($barcodeValue));
                     if($barcode!=='' && !$this->isValidBarcode($barcode)) throw new RuntimeException('Barcode harus berisi maksimal 32 karakter Code 39 yang valid.');
-                    $uploadedPhoto = $this->storeProductPhoto($_FILES['foto'] ?? null);
+                    $uploadedPhoto = $this->storeProductPhoto($_FILES['foto'] ?? null, $id === 0);
                     $model->save(['id_kategori'=>(int)post('id_kategori'),'nama_produk'=>post('nama_produk'),'harga'=>(float)post('harga'),'stok'=>(int)post('stok'),'deskripsi'=>post('deskripsi'),'foto'=>$uploadedPhoto,'barcode'=>$barcode],$id?:null);
                 }
                 else $model->save(post('nama_kategori'),$id?:null);
-                flash('success','Data berhasil disimpan.'); redirect(url($type));
+                flash('success', $id > 0 ? 'Data berhasil diperbarui.' : 'Data berhasil disimpan.'); redirect(url($type));
             } catch(Throwable $e){
                 if($uploadedPhoto !== null) {
                     $uploadedPath = dirname(__DIR__, 2) . '/public/uploads/produk/' . $uploadedPhoto;
@@ -76,7 +77,7 @@ class CrudController {
                 $error='Gagal menyimpan data: '.$e->getMessage();
             }
         }
-        if(isset($_GET['hapus'])){try{$model->delete((int)$_GET['hapus']);flash('success','Data berhasil dihapus.');}catch(Throwable $e){flash('error','Data tidak dapat dihapus karena masih digunakan.');}redirect(url($type));}
+        if(isset($_GET['hapus'])){try{$model->delete((int)$_GET['hapus']);flash('success','Data berhasil dihapus.');}catch(Throwable $e){flash('error','Gagal menghapus data: '.$e->getMessage());}redirect(url($type));}
         $title='Data '.ucfirst($type); require APP_PATH.'/views/crud/'.$type.'.php';
     }
     private function isValidBarcode(string $barcode): bool {

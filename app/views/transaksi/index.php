@@ -21,6 +21,7 @@
           <th>Kode Transaksi</th>
           <th>Tanggal</th>
           <th>Nama Pelanggan</th>
+          <th>Metode Pembayaran</th>
           <th>Status Pesanan</th>
           <th>Total Belanja</th>
           <th>Aksi</th>
@@ -42,6 +43,7 @@
               <small style="color: var(--text-muted);"><i class="fa-solid fa-location-dot" style="font-size: 10px;"></i> <?= e($r['kota']) ?></small>
             <?php endif; ?>
           </td>
+          <td><?= e($r['metode_pembayaran'] ?? 'Tunai') ?></td>
           <td>
             <span class="badge-status success"><i class="fa-solid fa-check"></i> Selesai (Lunas)</span>
           </td>
@@ -56,7 +58,7 @@
         </tr>
         <?php endforeach; ?>
         <?php if(!$items): ?>
-          <tr><td colspan="6" class="empty">Belum ada transaksi tersimpan.</td></tr>
+          <tr><td colspan="7" class="empty">Belum ada transaksi tersimpan.</td></tr>
         <?php endif; ?>
       </tbody>
     </table>

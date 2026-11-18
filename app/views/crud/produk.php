@@ -6,7 +6,7 @@
     <p>Kelola etalase toko, harga diskon, stok barang, dan kategori produk agar menarik pembeli.</p>
   </div>
   <div style="display: flex; gap: 10px;">
-    <button type="button" class="btn primary" onclick="document.getElementById('formTambahProduk').scrollIntoView({behavior: 'smooth'});">
+    <button type="button" class="btn primary" onclick="resetProductForm(); document.getElementById('formTambahProduk').scrollIntoView({behavior: 'smooth'});">
       <i class="fa-solid fa-plus"></i> Tambah Produk
     </button>
   </div>
@@ -57,7 +57,6 @@
     <div class="product-card-body">
       <span class="product-cat-pill"><?= e($r['nama_kategori'] ?? 'Umum') ?></span>
       <div class="product-card-title"><?= e($r['nama_produk']) ?></div>
-      <?= barcode_svg((string)($r['barcode'] ?? '')) ?>
       <div class="product-card-desc"><?= e($r['deskripsi'] ?: 'Produk pilihan bermutu tinggi, siap dikirim.') ?></div>
       <div class="product-price-row">
         <span class="original-price"><?= rupiah($oriPrice) ?></span>
@@ -68,11 +67,24 @@
         <span class="product-sold">150+ Terjual</span>
         <span class="stock-tag <?= $r['stok'] <= 10 ? 'low' : '' ?>">Stok: <?= $r['stok'] ?></span>
       </div>
-      <div style="display: flex; gap: 8px;">
-        <a href="<?= url('transaksi_tambah') ?>" class="btn-add-cart" style="flex: 1;">
-          <i class="fa-solid fa-cart-shopping"></i> Beli di Kasir
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <a href="<?= url('transaksi_tambah') ?>" class="btn-add-cart" style="flex: 1; padding: 7px 10px; font-size: 13px;" title="Beli di Kasir">
+          <i class="fa-solid fa-cart-shopping"></i> Kasir
         </a>
-        <a class="danger-link" onclick="return confirm('Hapus produk <?= e(addslashes($r['nama_produk'])) ?>?')" href="<?= url('produk',['hapus'=>$r['id_produk']]) ?>" title="Hapus Produk" style="padding: 8px; border: 1px solid #fee2e2; border-radius: var(--radius-sm); background: #fff5f5;">
+        <button type="button" class="btn secondary sm btn-edit-product"
+                data-id="<?= $r['id_produk'] ?>"
+                data-nama="<?= e($r['nama_produk']) ?>"
+                data-kategori="<?= $r['id_kategori'] ?>"
+                data-harga="<?= (float)$r['harga'] ?>"
+                data-stok="<?= (int)$r['stok'] ?>"
+                data-deskripsi="<?= e($r['deskripsi'] ?? '') ?>"
+                data-barcode="<?= e($r['barcode'] ?? '') ?>"
+                data-foto="<?= e($r['foto'] ?? '') ?>"
+                title="Edit Produk"
+                style="padding: 7px 10px; font-size: 13px;">
+          <i class="fa-solid fa-pen-to-square"></i> Edit
+        </button>
+        <a class="danger-link" onclick="return confirm('Hapus produk <?= e(addslashes($r['nama_produk'])) ?>?')" href="<?= url('produk',['hapus'=>$r['id_produk']]) ?>" title="Hapus Produk" style="padding: 7px 10px; border: 1px solid #fee2e2; border-radius: var(--radius-sm); background: #fff5f5; font-size: 13px; display: inline-flex; align-items: center; justify-content: center;">
           <i class="fa-solid fa-trash"></i>
         </a>
       </div>
@@ -118,7 +130,6 @@
             <strong><?= e($r['nama_produk']) ?></strong>
           </td>
           <td>
-            <?= barcode_svg((string)($r['barcode'] ?? '')) ?>
             <form method="post" action="<?= url('produk') ?>" style="display: flex; gap: 6px; min-width: 190px;">
               <?= csrf_field() ?>
               <input type="hidden" name="aksi" value="update_barcode">
@@ -142,9 +153,23 @@
             <small style="color: var(--text-muted);"><?= e($r['deskripsi'] ?: '-') ?></small>
           </td>
           <td>
-            <a class="danger-link" onclick="return confirm('Hapus produk <?= e(addslashes($r['nama_produk'])) ?>?')" href="<?= url('produk',['hapus'=>$r['id_produk']]) ?>">
-              <i class="fa-solid fa-trash"></i> Hapus
-            </a>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <button type="button" class="btn secondary sm btn-edit-product"
+                      data-id="<?= $r['id_produk'] ?>"
+                      data-nama="<?= e($r['nama_produk']) ?>"
+                      data-kategori="<?= $r['id_kategori'] ?>"
+                      data-harga="<?= (float)$r['harga'] ?>"
+                      data-stok="<?= (int)$r['stok'] ?>"
+                      data-deskripsi="<?= e($r['deskripsi'] ?? '') ?>"
+                      data-barcode="<?= e($r['barcode'] ?? '') ?>"
+                      data-foto="<?= e($r['foto'] ?? '') ?>"
+                      title="Edit Produk">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </button>
+              <a class="danger-link" onclick="return confirm('Hapus produk <?= e(addslashes($r['nama_produk'])) ?>?')" href="<?= url('produk',['hapus'=>$r['id_produk']]) ?>" title="Hapus Produk">
+                <i class="fa-solid fa-trash"></i> Hapus
+              </a>
+            </div>
           </td>
         </tr>
         <?php endforeach; ?>
@@ -153,25 +178,33 @@
   </div>
 </div>
 
-<!-- Tambah Produk Form Panel -->
+<!-- Tambah / Edit Produk Form Panel -->
 <div class="panel" id="formTambahProduk">
-  <h2><i class="fa-solid fa-circle-plus" style="color: var(--shopee-primary);"></i> Tambah Produk Baru ke Etalase</h2>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+    <h2 id="formTitle" style="margin-bottom: 0;">
+      <i class="fa-solid fa-circle-plus" style="color: var(--shopee-primary);"></i> Tambah Produk Baru ke Etalase
+    </h2>
+    <button type="button" id="btnCancelEdit" class="btn secondary sm" style="display: none;" onclick="resetProductForm();">
+      <i class="fa-solid fa-xmark"></i> Batal Edit
+    </button>
+  </div>
   <?php if(!empty($error)): ?>
     <div class="shopee-alert error" role="alert">
       <i class="fa-solid fa-circle-exclamation"></i>
       <div class="alert-text"><?= e($error) ?></div>
     </div>
   <?php endif; ?>
-  <form method="post" class="form-grid" enctype="multipart/form-data">
+  <form method="post" class="form-grid" enctype="multipart/form-data" id="productForm">
     <?= csrf_field() ?>
+    <input type="hidden" name="id" id="input-id" value="0">
     <label>
       Nama Produk
-      <input name="nama_produk" required placeholder="Contoh: Biskuit Cokelat Premium">
+      <input name="nama_produk" id="input-nama" required placeholder="Contoh: Biskuit Cokelat Premium">
     </label>
 
     <label>
       Kategori Produk
-      <select name="id_kategori" required>
+      <select name="id_kategori" id="input-kategori" required>
         <?php foreach($categories as $c): ?>
           <option value="<?= $c['id_kategori'] ?>"><?= e($c['nama_kategori']) ?></option>
         <?php endforeach; ?>
@@ -180,37 +213,122 @@
 
     <label>
       Harga Jual (Rp)
-      <input type="number" name="harga" min="0" step="500" required placeholder="Contoh: 15000">
+      <input type="number" name="harga" id="input-harga" min="0" step="500" required placeholder="Contoh: 15000">
     </label>
 
     <label>
-      Jumlah Stok Awal
-      <input type="number" name="stok" min="0" required placeholder="Contoh: 50">
+      Jumlah Stok
+      <input type="number" name="stok" id="input-stok" min="0" required placeholder="Contoh: 50">
     </label>
 
     <label class="wide">
       Deskripsi Produk
-      <input name="deskripsi" placeholder="Deskripsi singkat produk untuk menarik perhatian pembeli">
+      <input name="deskripsi" id="input-deskripsi" placeholder="Deskripsi singkat produk untuk menarik perhatian pembeli">
     </label>
 
     <label class="wide">
       Barcode Produk
-      <input type="text" name="barcode" class="product-barcode-input" maxlength="32" autocomplete="off" placeholder="Scan atau masukkan barcode pada kemasan">
+      <input type="text" name="barcode" id="input-barcode" class="product-barcode-input" maxlength="32" autocomplete="off" placeholder="Scan atau masukkan barcode pada kemasan">
       <small>Opsional. Jika kosong, sistem membuat kode internal otomatis. Barcode harus unik.</small>
     </label>
 
     <label class="wide">
       Foto Produk
-      <input type="file" name="foto" accept="image/jpeg,image/png,image/webp" required>
-      <small>Wajib diisi. Format JPG, PNG, atau WEBP, maksimal 5 MB.</small>
+      <input type="file" name="foto" id="input-foto" accept="image/jpeg,image/png,image/webp" required>
+      <small id="fotoHelpText">Wajib diisi untuk produk baru. Format JPG, PNG, atau WEBP, maksimal 5 MB.</small>
+      <div id="currentPhotoPreview" style="display: none; margin-top: 10px; align-items: center; gap: 12px; padding: 10px; background: #f8fafc; border-radius: var(--radius-sm); border: 1px dashed var(--border);">
+        <img id="currentPhotoImg" src="" alt="Foto saat ini" style="width: 54px; height: 54px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+        <div style="font-size: 13px; color: var(--text-muted);">
+          <strong style="color: var(--text); display: block;">Foto Saat Ini Tersimpan</strong>
+          Biarkan input file di atas kosong jika tidak ingin mengganti foto ini.
+        </div>
+      </div>
     </label>
 
-    <div class="wide" style="display: flex; justify-content: flex-end; margin-top: 6px;">
-      <button class="btn primary" style="padding: 11px 24px;">
-        <i class="fa-solid fa-floppy-disk"></i> Simpan ke Etalase
+    <div class="wide" style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px;">
+      <button type="button" id="btnCancelEditBottom" class="btn secondary" style="display: none;" onclick="resetProductForm();">
+        <i class="fa-solid fa-xmark"></i> Batal
+      </button>
+      <button type="submit" id="btnSubmitProduct" class="btn primary" style="padding: 11px 24px;">
+        <i class="fa-solid fa-floppy-disk"></i> <span id="btnSubmitText">Simpan ke Etalase</span>
       </button>
     </div>
   </form>
 </div>
+
+<script>
+function editProduct(data) {
+  document.getElementById('input-id').value = data.id;
+  document.getElementById('input-nama').value = data.nama;
+  document.getElementById('input-kategori').value = data.kategori;
+  document.getElementById('input-harga').value = data.harga;
+  document.getElementById('input-stok').value = data.stok;
+  document.getElementById('input-deskripsi').value = data.deskripsi;
+  document.getElementById('input-barcode').value = data.barcode;
+
+  const fotoInput = document.getElementById('input-foto');
+  fotoInput.removeAttribute('required');
+  document.getElementById('fotoHelpText').innerHTML = 'Opsional saat edit. Pilih file baru jika ingin mengganti foto. Format JPG, PNG, atau WEBP (maks 5 MB).';
+
+  if (data.foto) {
+    document.getElementById('currentPhotoPreview').style.display = 'flex';
+    document.getElementById('currentPhotoImg').src = '<?= BASE_URL ?>/uploads/produk/' + encodeURIComponent(data.foto);
+  } else {
+    document.getElementById('currentPhotoPreview').style.display = 'none';
+  }
+
+  document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--shopee-primary);"></i> Edit Produk #' + data.id + ' (' + (data.nama || '') + ')';
+  document.getElementById('btnSubmitText').innerText = 'Perbarui Produk';
+  document.getElementById('btnCancelEdit').style.display = 'inline-flex';
+  document.getElementById('btnCancelEditBottom').style.display = 'inline-flex';
+
+  document.getElementById('formTambahProduk').scrollIntoView({behavior: 'smooth'});
+  document.getElementById('input-nama').focus();
+}
+
+function resetProductForm() {
+  document.getElementById('productForm').reset();
+  document.getElementById('input-id').value = '0';
+  const fotoInput = document.getElementById('input-foto');
+  fotoInput.setAttribute('required', 'required');
+  document.getElementById('fotoHelpText').innerText = 'Wajib diisi untuk produk baru. Format JPG, PNG, atau WEBP, maksimal 5 MB.';
+  document.getElementById('currentPhotoPreview').style.display = 'none';
+
+  document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-circle-plus" style="color: var(--shopee-primary);"></i> Tambah Produk Baru ke Etalase';
+  document.getElementById('btnSubmitText').innerText = 'Simpan ke Etalase';
+  document.getElementById('btnCancelEdit').style.display = 'none';
+  document.getElementById('btnCancelEditBottom').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.btn-edit-product').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      editProduct({
+        id: this.dataset.id,
+        nama: this.dataset.nama,
+        kategori: this.dataset.kategori,
+        harga: this.dataset.harga,
+        stok: this.dataset.stok,
+        deskripsi: this.dataset.deskripsi,
+        barcode: this.dataset.barcode,
+        foto: this.dataset.foto
+      });
+    });
+  });
+
+  <?php if (!empty($editItem)): ?>
+  editProduct({
+    id: <?= json_encode($editItem['id_produk']) ?>,
+    nama: <?= json_encode($editItem['nama_produk']) ?>,
+    kategori: <?= json_encode($editItem['id_kategori']) ?>,
+    harga: <?= json_encode((float)$editItem['harga']) ?>,
+    stok: <?= json_encode((int)$editItem['stok']) ?>,
+    deskripsi: <?= json_encode($editItem['deskripsi'] ?? '') ?>,
+    barcode: <?= json_encode($editItem['barcode'] ?? '') ?>,
+    foto: <?= json_encode($editItem['foto'] ?? '') ?>
+  });
+  <?php endif; ?>
+});
+</script>
 
 <?php require APP_PATH.'/views/layouts/footer.php'; ?>

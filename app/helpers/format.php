@@ -1,10 +1,18 @@
 <?php
 function rupiah($angka): string { return 'Rp ' . number_format((float)$angka, 0, ',', '.'); }
 function e($value): string { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
-function barcode_svg(string $value): string {
+function redirect(string $url): never { header('Location: '.$url); exit; }
+function url(string $page, array $params=[]): string {
+    return BASE_URL.'/index.php?'.http_build_query(array_merge(['page'=>$page],$params));
+}
+function flash(string $key, ?string $message=null): ?string {
+    if ($message !== null) { $_SESSION['_flash'][$key]=$message; return null; }
+    $value=$_SESSION['_flash'][$key]??null; unset($_SESSION['_flash'][$key]); return $value;
+}
+function transaction_barcode_svg(string $value): string {
     $barcode=strtoupper(trim($value));
     if($barcode==='' || strlen($barcode)>32 || preg_match('/^[A-Z0-9 .$\x2F+%-]+$/D',$barcode)!==1) {
-        return '<div class="barcode-image barcode-invalid">Barcode tidak valid</div>';
+        return '';
     }
 
     $patterns=[
@@ -18,15 +26,15 @@ function barcode_svg(string $value): string {
         'S'=>'nnwnnnwwn','T'=>'nnnnwnwwn','U'=>'wwnnnnnnw','V'=>'nwwnnnnnw',
         'W'=>'wwwnnnnnn','X'=>'nwnnwnnnw','Y'=>'wwnnwnnnn','Z'=>'nwwnwnnnn',
         '-'=>'nwnnnnwnw','.'=>'wwnnnnwnn',' '=>'nwwnnnwnn','$'=>'nwnwnwnnn',
-        '/' =>'nwnwnnnwn','+'=>'nwnnnwnwn','%'=>'nnnwnwnwn','*'=>'nwnnwnwnn',
+        '/'=>'nwnwnnnwn','+'=>'nwnnnwnwn','%'=>'nnnwnwnwn','*'=>'nwnnwnwnn',
     ];
     $narrow=2;
     $wide=5;
-    $quietZone=$narrow*10;
+    $quietZone=20;
     $barHeight=48;
     $position=$quietZone;
-    $characters=str_split('*'.$barcode.'*');
     $bars='';
+    $characters=str_split('*'.$barcode.'*');
 
     foreach($characters as $characterIndex=>$character) {
         foreach(str_split($patterns[$character]) as $elementIndex=>$element) {
@@ -37,14 +45,6 @@ function barcode_svg(string $value): string {
         if($characterIndex<count($characters)-1) $position+=$narrow;
     }
 
-    $svg='<svg viewBox="0 0 '.($position+$quietZone).' '.$barHeight.'" preserveAspectRatio="none" role="img" aria-label="'.e('Barcode '.$barcode).'">'.$bars.'</svg>';
-    return '<div class="barcode-image">'.$svg.'<span>'.e($barcode).'</span></div>';
-}
-function redirect(string $url): never { header('Location: '.$url); exit; }
-function url(string $page, array $params=[]): string {
-    return BASE_URL.'/index.php?'.http_build_query(array_merge(['page'=>$page],$params));
-}
-function flash(string $key, ?string $message=null): ?string {
-    if ($message !== null) { $_SESSION['_flash'][$key]=$message; return null; }
-    $value=$_SESSION['_flash'][$key]??null; unset($_SESSION['_flash'][$key]); return $value;
+    $width=$position+$quietZone;
+    return '<svg class="receipt-code-svg" viewBox="0 0 '.$width.' '.$barHeight.'" preserveAspectRatio="none" role="img" aria-label="'.e('Barcode kode transaksi '.$barcode).'"><rect width="100%" height="100%" fill="#fff"></rect>'.$bars.'</svg>';
 }

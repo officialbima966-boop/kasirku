@@ -5,9 +5,16 @@
     <h1><i class="fa-solid fa-cash-register" style="color: var(--shopee-primary);"></i> Kasir POS & Checkout Pesanan</h1>
     <p>Pilih produk dari etalase untuk ditambahkan ke keranjang belanja pelanggan.</p>
   </div>
-  <a href="<?= url('transaksi') ?>" class="btn secondary">
-    <i class="fa-solid fa-arrow-left"></i> Riwayat Pesanan
-  </a>
+  <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+    <?php if((current_user()['role'] ?? '') === 'kasir'): ?>
+      <a href="<?= url('kasir_pesanan') ?>" class="btn secondary">
+        <i class="fa-solid fa-clipboard-list"></i> Antrean Pembayaran
+      </a>
+    <?php endif; ?>
+    <a href="<?= url('transaksi') ?>" class="btn secondary">
+      <i class="fa-solid fa-arrow-left"></i> Riwayat Pesanan
+    </a>
+  </div>
 </div>
 
 <form method="post" action="<?= url('transaksi_simpan') ?>" id="transaction-form">
@@ -37,7 +44,6 @@
         <?php foreach($produk as $p): ?>
         <div class="pos-item-card">
           <div class="pos-item-title"><?= e($p['nama_produk']) ?></div>
-          <?= barcode_svg((string)($p['barcode'] ?? '')) ?>
           <div class="pos-item-stock"><i class="fa-solid fa-box"></i> Stok: <?= $p['stok'] ?></div>
           <div class="pos-item-price"><?= rupiah($p['harga']) ?></div>
           <button type="button" 
@@ -58,32 +64,6 @@
           </div>
         <?php endif; ?>
       </div>
-
-      <!-- Quick Add Fallback Table for manual entry -->
-      <details style="margin-top: 24px; border-top: 1px dashed var(--border-medium); padding-top: 16px;">
-        <summary style="cursor: pointer; font-weight: 700; color: var(--text-muted); font-size: 13px;">
-          <i class="fa-solid fa-sliders"></i> Opsi Input Manual Baris Produk
-        </summary>
-        <div style="margin-top: 12px;">
-          <div class="panel-head">
-            <h3>Baris Manual</h3>
-            <button type="button" class="btn secondary sm" id="add-item">＋ Tambah Baris</button>
-          </div>
-          <div id="items-container">
-            <div class="transaction-row">
-              <select name="produk[]">
-                <?php foreach($produk as $p): ?>
-                  <option value="<?= $p['id_produk'] ?>">
-                    <?= e($p['nama_produk']) ?> — <?= rupiah($p['harga']) ?> (stok <?= $p['stok'] ?>)
-                  </option>
-                <?php endforeach; ?>
-              </select>
-              <input type="number" name="jumlah[]" min="1" value="1" placeholder="Qty">
-              <button type="button" class="remove-row">Hapus</button>
-            </div>
-          </div>
-        </div>
-      </details>
     </div>
 
     <!-- Right Column: Shopee Order Summary / Cart -->
@@ -109,6 +89,15 @@
               <?= e($p['nama_pelanggan']) ?> <?= !empty($p['kota']) ? '('.e($p['kota']).')' : '' ?>
             </option>
           <?php endforeach; ?>
+        </select>
+      </label>
+
+      <label style="display: flex; flex-direction: column; gap: 6px; font-weight: 700; margin-bottom: 16px;">
+        <span><i class="fa-solid fa-credit-card" style="color: var(--shopee-primary); margin-right: 4px;"></i> Metode Pembayaran</span>
+        <select name="metode_pembayaran" required style="padding: 10px 12px; font-weight: 600;">
+          <option value="Tunai">Tunai</option>
+          <option value="Transfer">Transfer</option>
+          <option value="QRIS">QRIS</option>
         </select>
       </label>
 
@@ -149,6 +138,13 @@
           <span>Uang Dibayar (Rp)</span>
           <input type="number" name="uang_dibayar" id="pos-cash-input" min="0" step="1" inputmode="numeric" placeholder="Masukkan uang dari pelanggan" required>
         </label>
+        <div class="payment-quick-buttons">
+          <button type="button" class="quick-pay-btn" id="pos-btn-uang-pas">💵 Uang Pas</button>
+          <button type="button" class="quick-pay-btn" onclick="window.posSetCash(10000)">10.000</button>
+          <button type="button" class="quick-pay-btn" onclick="window.posSetCash(20000)">20.000</button>
+          <button type="button" class="quick-pay-btn" onclick="window.posSetCash(50000)">50.000</button>
+          <button type="button" class="quick-pay-btn" onclick="window.posSetCash(100000)">100.000</button>
+        </div>
         <div class="summary-row change-row" id="pos-change-row">
           <span id="pos-change-label">Kembalian</span>
           <strong id="pos-change" aria-live="polite">Rp 0</strong>

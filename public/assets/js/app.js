@@ -198,6 +198,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (taxEl) taxEl.textContent = formatRp(pajak);
       if (totalEl) totalEl.textContent = formatRp(total);
 
+      if (paymentMethodSelect && (paymentMethodSelect.value === 'Transfer' || paymentMethodSelect.value === 'QRIS') && paymentInput) {
+        if (total > 0) paymentInput.value = total;
+      }
+
       if (paymentInput && changeRow && changeLabel && changeEl) {
         const payment = Number(paymentInput.value) || 0;
         const difference = payment - total;
@@ -347,6 +351,39 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    const paymentMethodSelect = transactionForm ? transactionForm.querySelector('select[name="metode_pembayaran"]') : null;
+
+    window.posSetCash = (amount) => {
+      if (paymentInput) {
+        paymentInput.value = amount;
+        paymentInput.setCustomValidity('');
+        updateTotals();
+      }
+    };
+
+    const btnUangPas = document.getElementById('pos-btn-uang-pas');
+    if (btnUangPas) {
+      btnUangPas.addEventListener('click', () => {
+        if (paymentInput) {
+          paymentInput.value = totalDue;
+          paymentInput.setCustomValidity('');
+          updateTotals();
+        }
+      });
+    }
+
+    if (paymentMethodSelect) {
+      paymentMethodSelect.addEventListener('change', () => {
+        if (paymentMethodSelect.value === 'Transfer' || paymentMethodSelect.value === 'QRIS') {
+          if (paymentInput && totalDue > 0) {
+            paymentInput.value = totalDue;
+            paymentInput.setCustomValidity('');
+            updateTotals();
+          }
+        }
+      });
+    }
+
     if (discountInput) {
       discountInput.addEventListener('input', updateTotals);
     }
@@ -360,6 +397,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (transactionForm && paymentInput) {
       transactionForm.addEventListener('submit', (event) => {
+        if (cart.size === 0) {
+          event.preventDefault();
+          alert('Keranjang belanja masih kosong! Silakan klik "+ Tambah" pada produk di etalase terlebih dahulu.');
+          return;
+        }
         const payment = Number(paymentInput.value);
         if (!Number.isSafeInteger(payment) || payment < totalDue) {
           event.preventDefault();

@@ -1,5 +1,6 @@
 <?php
 $currentPage = $_GET['page'] ?? 'dashboard';
+$userRole = current_user()['role'] ?? 'admin';
 ?>
 <aside class="sidebar" id="appSidebar">
   <div class="sidebar-header">
@@ -32,6 +33,32 @@ $currentPage = $_GET['page'] ?? 'dashboard';
   </div>
 
   <nav class="sidebar-nav">
+    <?php if($userRole==='pelanggan'): ?>
+      <div class="nav-section-title">AKUN PELANGGAN</div>
+      <a href="<?= url('member') ?>" class="nav-item <?= $currentPage==='member'?'active':'' ?>">
+        <span class="nav-icon"><i class="fa-solid fa-store"></i></span>
+        <span class="nav-label">Belanja Member</span>
+      </a>
+      <a href="<?= url('member_pesanan') ?>" class="nav-item <?= $currentPage==='member_pesanan'?'active':'' ?>">
+        <span class="nav-icon"><i class="fa-solid fa-receipt"></i></span>
+        <span class="nav-label">Pesanan Saya</span>
+      </a>
+    <?php elseif($userRole==='kasir'): ?>
+      <div class="nav-section-title">MENU KASIR</div>
+      <a href="<?= url('transaksi_tambah') ?>" class="nav-item nav-item-highlight <?= $currentPage === 'transaksi_tambah' ? 'active' : '' ?>">
+        <span class="nav-icon"><i class="fa-solid fa-cash-register"></i></span>
+        <span class="nav-label">Kasir POS (Transaksi)</span>
+        <span class="nav-tag hot">HOT</span>
+      </a>
+      <a href="<?= url('kasir_pesanan') ?>" class="nav-item <?= in_array($currentPage,['kasir_pesanan','kasir_bayar'])?'active':'' ?>">
+        <span class="nav-icon"><i class="fa-solid fa-clipboard-list"></i></span>
+        <span class="nav-label">Antrean Pembayaran</span>
+      </a>
+      <a href="<?= url('transaksi') ?>" class="nav-item <?= in_array($currentPage,['transaksi','transaksi_detail'])?'active':'' ?>">
+        <span class="nav-icon"><i class="fa-solid fa-receipt"></i></span>
+        <span class="nav-label">Riwayat Transaksi</span>
+      </a>
+    <?php else: ?>
     <div class="nav-section-title">MENU UTAMA</div>
     
     <a href="<?= url('dashboard') ?>" class="nav-item <?= $currentPage === 'dashboard' ? 'active' : '' ?>">
@@ -84,6 +111,7 @@ $currentPage = $_GET['page'] ?? 'dashboard';
       <span class="nav-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
       <span class="nav-label">Log Aktivitas</span>
     </a>
+    <?php endif; ?>
   </nav>
 
   <div class="sidebar-footer">

@@ -1,3 +1,8 @@
+<?php
+$userRole=current_user()['role']??'admin';
+$actionPage=$userRole==='pelanggan'?'member':'transaksi_tambah';
+$actionLabel=$userRole==='pelanggan'?'Belanja':'Transaksi Baru';
+?>
 <header class="topbar">
   <div class="topbar-left">
     <button type="button" class="sidebar-toggle-btn" id="sidebarOpenBtn" aria-label="Buka Menu">
@@ -25,9 +30,9 @@
       <span>Gratis Ongkir XTRA</span>
     </div>
 
-    <a href="<?= url('transaksi_tambah') ?>" class="btn-shopee-header">
+    <a href="<?= url($actionPage) ?>" class="btn-shopee-header">
       <i class="fa-solid fa-cart-plus"></i>
-      <span>Transaksi Baru</span>
+      <span><?= e($actionLabel) ?></span>
     </a>
 
     <div class="topbar-user-chip">

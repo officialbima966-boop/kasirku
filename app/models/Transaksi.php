@@ -58,13 +58,13 @@ class Transaksi extends BaseModel {
                 throw new RuntimeException('Diskon harus bernilai nol atau lebih dan tidak boleh melebihi subtotal.');
             }
 
-            $tax = round(($subtotal - $discount) * 0.11, 2);
-            $total = round($subtotal - $discount + $tax, 2);
+            $tax = (float)round(($subtotal - $discount) * 0.11);
+            $total = (float)round($subtotal - $discount + $tax);
             if ($payment < $total) {
                 throw new RuntimeException('Uang dibayar kurang dari total pembayaran.');
             }
-            $change = round($payment - $total, 2);
-            $insertTransaction = $this->db->prepare("INSERT INTO tbl_transaksi(kode_transaksi,tanggal,id_pelanggan,total_belanja,diskon,pajak,uang_dibayar,kembalian) VALUES(?,?,?,?,?,?,?,?)");
+            $change = (float)round($payment - $total);
+            $insertTransaction = $this->db->prepare("INSERT INTO tbl_transaksi(kode_transaksi,tanggal,id_pelanggan,total_belanja,diskon,pajak,uang_dibayar,kembalian,metode_pembayaran) VALUES(?,?,?,?,?,?,?,?,?)");
             $insertTransaction->execute([
                 $header['kode'],
                 $header['tanggal'],
@@ -74,6 +74,7 @@ class Transaksi extends BaseModel {
                 $tax,
                 $payment,
                 $change,
+                $header['metode_pembayaran'],
             ]);
             $transactionId = (int)$this->db->lastInsertId();
 

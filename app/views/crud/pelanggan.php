@@ -3,7 +3,7 @@
 <div class="page-heading">
   <div>
     <h1><i class="fa-solid fa-users" style="color: var(--shopee-primary);"></i> Data Pelanggan & Member Toko</h1>
-    <p>Kelola identitas pembeli, kontak pelanggan, dan riwayat loyalitas toko.</p>
+    <p>Kelola identitas pembeli, akun login member, dan kartu RFID member loyalitas toko.</p>
   </div>
   <a class="btn primary" href="<?= url('transaksi_tambah') ?>">
     <i class="fa-solid fa-cart-plus"></i> Transaksi Baru
@@ -11,7 +11,7 @@
 </div>
 
 <div class="panel">
-  <h2><i class="fa-solid fa-user-plus" style="color: var(--shopee-primary);"></i> Tambah / Perbarui Pelanggan</h2>
+  <h2><i class="fa-solid fa-user-plus" style="color: var(--shopee-primary);"></i> Tambah / Perbarui Pelanggan & Kartu Member</h2>
   <form method="post" class="form-grid" id="formPelanggan">
     <?= csrf_field() ?>
     <input type="hidden" name="id" id="edit-id">
@@ -32,7 +32,23 @@
     </label>
 
     <label>
-      Alamat Pengiriman
+      Username Login Member (Opsional)
+      <input name="username" id="input-username" placeholder="Contoh: andi_member">
+    </label>
+
+    <label class="wide">
+      UID Kartu RFID Member (Untuk Diskon Otomatis Saat Belanja)
+      <div style="display: flex; gap: 8px;">
+        <input name="rfid_uid" id="input-rfid" placeholder="Scan kartu RFID pada pembaca USB atau klik Buat UID" style="flex: 1;">
+        <button type="button" class="btn secondary" style="white-space: nowrap;" onclick="document.getElementById('input-rfid').value='RFID-'+Math.random().toString(36).substring(2,8).toUpperCase();">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Buat UID Acak
+        </button>
+      </div>
+      <small style="color: var(--text-muted); margin-top: 4px;">Kartu ini otomatis memberi diskon 5% saat pelanggan berbelanja dan kartu di-scan di kasir.</small>
+    </label>
+
+    <label class="wide">
+      Alamat Pengiriman / Domisili
       <input name="alamat" id="input-alamat" placeholder="Contoh: Jl. Mawar No. 12">
     </label>
 
@@ -60,7 +76,8 @@
           <th>Nama Pelanggan</th>
           <th>Kota</th>
           <th>No. HP</th>
-          <th>Alamat</th>
+          <th>Username Akun</th>
+          <th>Kartu RFID Member</th>
           <th>Aksi</th>
         </tr>
       </thead>
@@ -84,7 +101,22 @@
             <i class="fa-solid fa-phone" style="color: #059669; font-size: 11px; margin-right: 4px;"></i>
             <?= e($r['no_hp'] ?: '-') ?>
           </td>
-          <td><?= e($r['alamat'] ?: '-') ?></td>
+          <td>
+            <?php if(!empty($r['username'])): ?>
+              <span class="badge-status success"><i class="fa-solid fa-user"></i> <?= e($r['username']) ?></span>
+            <?php else: ?>
+              <span style="color: var(--text-light); font-size: 12px;">Belum ada akun</span>
+            <?php endif; ?>
+          </td>
+          <td>
+            <?php if(!empty($r['rfid_uid'])): ?>
+              <span class="badge-status success" style="letter-spacing: 0.5px;">
+                <i class="fa-solid fa-id-card"></i> <?= e($r['rfid_uid']) ?> (Diskon 5%)
+              </span>
+            <?php else: ?>
+              <span class="badge-status warning">Non-Member</span>
+            <?php endif; ?>
+          </td>
           <td>
             <div style="display: flex; gap: 8px;">
               <button type="button" 
@@ -95,6 +127,8 @@
                         document.getElementById('input-kota').value = '<?= e(addslashes($r['kota'] ?? '')) ?>';
                         document.getElementById('input-hp').value = '<?= e(addslashes($r['no_hp'] ?? '')) ?>';
                         document.getElementById('input-alamat').value = '<?= e(addslashes($r['alamat'] ?? '')) ?>';
+                        document.getElementById('input-username').value = '<?= e(addslashes($r['username'] ?? '')) ?>';
+                        document.getElementById('input-rfid').value = '<?= e(addslashes($r['rfid_uid'] ?? '')) ?>';
                         document.getElementById('formPelanggan').scrollIntoView({behavior: 'smooth'});
                       ">
                 <i class="fa-solid fa-pen-to-square"></i> Edit
@@ -107,7 +141,7 @@
         </tr>
         <?php endforeach; ?>
         <?php if(!$items): ?>
-          <tr><td colspan="6" class="empty">Belum ada data pelanggan.</td></tr>
+          <tr><td colspan="7" class="empty">Belum ada data pelanggan.</td></tr>
         <?php endif; ?>
       </tbody>
     </table>

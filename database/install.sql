@@ -12,8 +12,35 @@ CREATE TABLE IF NOT EXISTS tbl_user (
 
 CREATE TABLE IF NOT EXISTS tbl_pelanggan (
  id_pelanggan INT AUTO_INCREMENT PRIMARY KEY, nama_pelanggan VARCHAR(100) NOT NULL,
- kota VARCHAR(50), no_hp VARCHAR(25), alamat TEXT, dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+ kota VARCHAR(50), no_hp VARCHAR(25), alamat TEXT, username VARCHAR(50) DEFAULT NULL,
+ password VARCHAR(255) DEFAULT NULL, rfid_uid VARCHAR(64) DEFAULT NULL,
+ dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE KEY uq_pelanggan_username (username), UNIQUE KEY uq_pelanggan_rfid_uid (rfid_uid)
 ) ENGINE=InnoDB;
+
+ALTER TABLE tbl_pelanggan ADD COLUMN IF NOT EXISTS username VARCHAR(50) DEFAULT NULL AFTER alamat;
+ALTER TABLE tbl_pelanggan ADD COLUMN IF NOT EXISTS password VARCHAR(255) DEFAULT NULL AFTER username;
+ALTER TABLE tbl_pelanggan ADD COLUMN IF NOT EXISTS rfid_uid VARCHAR(64) DEFAULT NULL AFTER password;
+SET @member_username_index_exists = (
+ SELECT COUNT(*) FROM information_schema.statistics
+ WHERE table_schema=DATABASE() AND table_name='tbl_pelanggan' AND index_name='uq_pelanggan_username'
+);
+SET @member_username_index_sql = IF(@member_username_index_exists=0,
+ 'CREATE UNIQUE INDEX uq_pelanggan_username ON tbl_pelanggan(username)',
+ 'SELECT 1');
+PREPARE member_username_index_stmt FROM @member_username_index_sql;
+EXECUTE member_username_index_stmt;
+DEALLOCATE PREPARE member_username_index_stmt;
+SET @member_rfid_index_exists = (
+ SELECT COUNT(*) FROM information_schema.statistics
+ WHERE table_schema=DATABASE() AND table_name='tbl_pelanggan' AND index_name='uq_pelanggan_rfid_uid'
+);
+SET @member_rfid_index_sql = IF(@member_rfid_index_exists=0,
+ 'CREATE UNIQUE INDEX uq_pelanggan_rfid_uid ON tbl_pelanggan(rfid_uid)',
+ 'SELECT 1');
+PREPARE member_rfid_index_stmt FROM @member_rfid_index_sql;
+EXECUTE member_rfid_index_stmt;
+DEALLOCATE PREPARE member_rfid_index_stmt;
 
 CREATE TABLE IF NOT EXISTS tbl_kategori (
  id_kategori INT AUTO_INCREMENT PRIMARY KEY, nama_kategori VARCHAR(80) NOT NULL UNIQUE
@@ -24,7 +51,7 @@ CREATE TABLE IF NOT EXISTS tbl_produk (
  nama_produk VARCHAR(120) NOT NULL, harga DECIMAL(12,2) NOT NULL DEFAULT 0,
  stok INT NOT NULL DEFAULT 0, deskripsi TEXT, foto VARCHAR(255) DEFAULT NULL,
  barcode VARCHAR(64) DEFAULT NULL, UNIQUE KEY uq_produk_barcode (barcode),
- CONSTRAINT fk_produk_kategori FOREIGN KEY(id_kategori) REFERENCES tbl_kategori(id_kategori)
+ CONSTRAINT fk_produk_kategori FOREIGN KEY(id_kategori) REFERENCES tbl_kategori(id_kategori) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 ALTER TABLE tbl_produk ADD COLUMN IF NOT EXISTS foto VARCHAR(255) DEFAULT NULL AFTER deskripsi;
@@ -46,20 +73,52 @@ CREATE TABLE IF NOT EXISTS tbl_transaksi (
  id_transaksi INT AUTO_INCREMENT PRIMARY KEY, kode_transaksi VARCHAR(40) NOT NULL UNIQUE,
  tanggal DATE NOT NULL, id_pelanggan INT NOT NULL,
  total_belanja DECIMAL(14,2) NOT NULL DEFAULT 0, diskon DECIMAL(12,2) DEFAULT 0,
- pajak DECIMAL(12,2) DEFAULT 0, uang_dibayar DECIMAL(14,2) NOT NULL DEFAULT 0,
+ pajak DECIMAL(12,2) DEFAULT 0, metode_pembayaran VARCHAR(30) NOT NULL DEFAULT 'Tunai',
+ id_pesanan INT DEFAULT NULL, diskon_member_persen DECIMAL(5,2) NOT NULL DEFAULT 0,
+ uang_dibayar DECIMAL(14,2) NOT NULL DEFAULT 0,
  kembalian DECIMAL(14,2) NOT NULL DEFAULT 0, dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
- CONSTRAINT fk_transaksi_pelanggan FOREIGN KEY(id_pelanggan) REFERENCES tbl_pelanggan(id_pelanggan)
+ UNIQUE KEY uq_transaksi_pesanan (id_pesanan),
+ CONSTRAINT fk_transaksi_pelanggan FOREIGN KEY(id_pelanggan) REFERENCES tbl_pelanggan(id_pelanggan) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
+ALTER TABLE tbl_transaksi ADD COLUMN IF NOT EXISTS metode_pembayaran VARCHAR(30) NOT NULL DEFAULT 'Tunai' AFTER total_belanja;
+ALTER TABLE tbl_transaksi ADD COLUMN IF NOT EXISTS id_pesanan INT DEFAULT NULL AFTER metode_pembayaran;
+ALTER TABLE tbl_transaksi ADD COLUMN IF NOT EXISTS diskon_member_persen DECIMAL(5,2) NOT NULL DEFAULT 0 AFTER id_pesanan;
 ALTER TABLE tbl_transaksi ADD COLUMN IF NOT EXISTS uang_dibayar DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER pajak;
 ALTER TABLE tbl_transaksi ADD COLUMN IF NOT EXISTS kembalian DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER uang_dibayar;
 UPDATE tbl_transaksi SET uang_dibayar=total_belanja WHERE uang_dibayar=0 AND total_belanja>0;
+SET @order_transaction_index_exists = (
+ SELECT COUNT(*) FROM information_schema.statistics
+ WHERE table_schema=DATABASE() AND table_name='tbl_transaksi' AND index_name='uq_transaksi_pesanan'
+);
+SET @order_transaction_index_sql = IF(@order_transaction_index_exists=0,
+ 'CREATE UNIQUE INDEX uq_transaksi_pesanan ON tbl_transaksi(id_pesanan)',
+ 'SELECT 1');
+PREPARE order_transaction_index_stmt FROM @order_transaction_index_sql;
+EXECUTE order_transaction_index_stmt;
+DEALLOCATE PREPARE order_transaction_index_stmt;
 
 CREATE TABLE IF NOT EXISTS tbl_detail_transaksi (
  id_detail INT AUTO_INCREMENT PRIMARY KEY, id_transaksi INT NOT NULL, id_produk INT NOT NULL,
  jumlah INT NOT NULL, harga DECIMAL(12,2) NOT NULL, subtotal DECIMAL(14,2) NOT NULL,
- CONSTRAINT fk_detail_transaksi FOREIGN KEY(id_transaksi) REFERENCES tbl_transaksi(id_transaksi) ON DELETE CASCADE,
- CONSTRAINT fk_detail_produk FOREIGN KEY(id_produk) REFERENCES tbl_produk(id_produk)
+ CONSTRAINT fk_detail_transaksi FOREIGN KEY(id_transaksi) REFERENCES tbl_transaksi(id_transaksi) ON DELETE CASCADE ON UPDATE CASCADE,
+ CONSTRAINT fk_detail_produk FOREIGN KEY(id_produk) REFERENCES tbl_produk(id_produk) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS tbl_pesanan (
+ id_pesanan INT AUTO_INCREMENT PRIMARY KEY, kode_pesanan VARCHAR(40) NOT NULL UNIQUE,
+ id_pelanggan INT NOT NULL, status ENUM('menunggu','dibayar','dibatalkan') NOT NULL DEFAULT 'menunggu',
+ dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP, dibayar_pada TIMESTAMP NULL DEFAULT NULL,
+ KEY idx_pesanan_status_dibuat (status,dibuat_pada),
+ CONSTRAINT fk_pesanan_pelanggan FOREIGN KEY(id_pelanggan) REFERENCES tbl_pelanggan(id_pelanggan) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS tbl_detail_pesanan (
+ id_detail_pesanan INT AUTO_INCREMENT PRIMARY KEY, id_pesanan INT NOT NULL, id_produk INT NOT NULL,
+ jumlah INT NOT NULL, harga DECIMAL(12,2) NOT NULL, subtotal DECIMAL(14,2) NOT NULL,
+ UNIQUE KEY uq_detail_pesanan_produk (id_pesanan,id_produk),
+ CONSTRAINT fk_detail_pesanan_header FOREIGN KEY(id_pesanan) REFERENCES tbl_pesanan(id_pesanan) ON DELETE CASCADE ON UPDATE CASCADE,
+ CONSTRAINT fk_detail_pesanan_produk FOREIGN KEY(id_produk) REFERENCES tbl_produk(id_produk) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbl_log (
@@ -68,7 +127,8 @@ CREATE TABLE IF NOT EXISTS tbl_log (
 ) ENGINE=InnoDB;
 
 INSERT IGNORE INTO tbl_user(nama,username,password,role) VALUES
-('Administrator','admin','$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi','admin');
+('Administrator','admin','$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi','admin'),
+('Kasir','kasir',CONCAT(CHAR(36),'2y',CHAR(36),'10',CHAR(36),'i/ZmGcw46nEnY1ixqGVpcuMj4PFoBEAvy3PxEJXuPlvy5vZmHUEB2'),'kasir');
 INSERT IGNORE INTO tbl_kategori(nama_kategori) VALUES ('Makanan'),('Minuman'),('Perlengkapan');
 
 INSERT INTO tbl_pelanggan(nama_pelanggan,kota,no_hp,alamat)
